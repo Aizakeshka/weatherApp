@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Погодный дневник</title>
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600&family=Crimson+Text:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="FullLogo-round.png">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="wooden-desk">
+        <div class="book-container">
+            <div class="book-spine"></div>
+            
+            <div class="page-left">
+                <div class="decorative-corner top-left"></div>
+                <div class="decorative-corner top-right"></div>
+                
+                <h1 class="page-title">Погодный дневник</h1>
+                <p class="page-subtitle">Метеорологические наблюдения</p>
+                
+                <div class="search-container">
+                    <input type="text" class="search-box" id="cityInput" placeholder="Введите город...">
+                    <span id="searchIcon">🔍</span>
+
+                    <div id="historyContainer"></div>
+                    <button id="clearHistoryBtn">Очистить историю</button>
+                </div>
+                
+                <div id="weatherMain">
+                    <h2 id="cityName"></h2>
+                    <div class="temperature" id="temperature"></div>
+                    <div class="weather-description" id="weatherText"></div>
+
+                    <div class="details">
+                        <div>🌅 Восход: <span id="sunrise"></span></div>
+                        <div>🌇 Закат: <span id="sunset"></span></div>
+                        <div>💨 Ветер: <span id="wind"></span></div>
+                        <div>💧 Влажность: <span id="humidity"></span></div>
+                    </div>
+                </div>
+<div id="errorMessage"></div>
+
+                
+                <div class="divider"></div>
+                
+                <div class="weather-details" id="weatherDetails"></div>
+                
+                <div class="page-number">1</div>
+            </div>
+            
+            <div class="page-right">
+                <h2 class="forecast-title">Прогноз на неделю</h2>
+                
+                <div id="forecastContainer">
+                    <div class="loading">Загрузка прогноза</div>
+                </div>
+                
+                <div class="page-number">2</div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
