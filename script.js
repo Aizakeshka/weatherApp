@@ -29,15 +29,12 @@ function levenshtein(a, b) {
     return m[b.length][a.length];
 }
 
-/* -------------- УМНАЯ АВТОКОРРЕКЦИЯ ГОРОДОВ ---------------- */
 
 function smartCityName(rawName) {
     const clean = rawName.trim().toLowerCase();
 
-    // слишком короткие строки не исправляем
     if (clean.length < 4) return rawName;
 
-    // строки без букв не исправляем
     if (!/[a-zа-я]/i.test(clean)) return rawName;
 
     const worldCities = [
@@ -53,7 +50,6 @@ function smartCityName(rawName) {
     worldCities.forEach(city => {
         const score = levenshtein(clean, city.toLowerCase());
 
-        // допускаем ошибки лишь 25% от длины слова
         const allowed = Math.floor(city.length * 0.25);
 
         if (score < bestScore && score <= allowed) {
@@ -65,7 +61,6 @@ function smartCityName(rawName) {
     return best;
 }
 
-/* ----------------------------------------------------------- */
 
 let searchHistory = JSON.parse(localStorage.getItem("searchHistory") || "[]");
 
@@ -100,32 +95,19 @@ clearHistoryBtn.addEventListener("click", () => {
 async function loadWeather(city) {
     try {
         errorElem.textContent = "";
+        errorElem.style.display = "none";
 
-        const raw = city.trim();
-        const clean = raw.toLowerCase();
-        const fixedCity = smartCityName(raw);
+        const fixedCity = smartCityName(city);
 
         const geoRes = await fetch(
             `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(fixedCity)}&count=1&language=ru`
         );
         const geoData = await geoRes.json();
 
-        if (!geoData.results || geoData.results.length === 0) {
+        if (!geoData.results || geoData.results.length === 0)
             throw new Error("Город не найден");
-        }
 
         const place = geoData.results[0];
-        const found = place.name;            
-        const foundLower = found.toLowerCase();
-
-        const distance = levenshtein(clean, foundLower);
-        const allowed = Math.floor(foundLower.length * 0.25);
-
-        if ( (fixedCity.toLowerCase() === clean && foundLower !== clean)
-             || distance > allowed ) {
-            throw new Error("Город не найден");
-        }
-
         const lat = place.latitude;
         const lon = place.longitude;
 
@@ -136,12 +118,22 @@ async function loadWeather(city) {
 
         renderCurrent(place.name, place.country, weatherData.current_weather, weatherData.daily);
         renderForecast(weatherData.daily);
-        addToHistory(place.name);
-        localStorage.setItem("last_city", place.name);
+
+        addToHistory(fixedCity);
+        localStorage.setItem("last_city", fixedCity);
 
     } catch (e) {
         console.error(e);
+
         errorElem.textContent = e.message;
+        errorElem.style.display = "block";
+        errorElem.style.color = "red";
+        errorElem.style.fontWeight = "bold";
+        errorElem.style.textAlign = "center";
+        errorElem.style.padding = "15px";
+        errorElem.style.border = "2px dashed #8b7355";
+        errorElem.style.borderRadius = "10px";
+        errorElem.style.background = "rgba(255, 235, 205, 0.8)";
     }
 }
 
