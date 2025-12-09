@@ -93,13 +93,15 @@ clearHistoryBtn.addEventListener("click", () => {
 });
 
 async function loadWeather(city) {
-    errorElem.style.display = "none"; 
+    // Сброс предыдущей ошибки
+    errorElem.style.display = "none";
+    errorElem.textContent = "";
+
     if (!city || city.trim() === "") {
         errorElem.textContent = "Введите название города";
         errorElem.style.display = "block";
         return;
     }
-
 
     try {
         const fixedCity = smartCityName(city);
@@ -136,6 +138,7 @@ async function loadWeather(city) {
         errorElem.style.display = "block";
     }
 }
+
 
 
 function renderCurrent(city, country, current, daily) {
