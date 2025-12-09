@@ -93,10 +93,15 @@ clearHistoryBtn.addEventListener("click", () => {
 });
 
 async function loadWeather(city) {
-    try {
-        errorElem.textContent = "";
-        errorElem.style.display = "none";
+    errorElem.style.display = "none"; 
+    if (!city || city.trim() === "") {
+        errorElem.textContent = "Введите название города";
+        errorElem.style.display = "block";
+        return;
+    }
 
+
+    try {
         const fixedCity = smartCityName(city);
 
         const geoRes = await fetch(
@@ -104,8 +109,11 @@ async function loadWeather(city) {
         );
         const geoData = await geoRes.json();
 
-        if (!geoData.results || geoData.results.length === 0)
-            throw new Error("Город не найден");
+        if (!geoData.results || geoData.results.length === 0) {
+            errorElem.textContent = `Город "${city}" не найден`;
+            errorElem.style.display = "block";
+            return;
+        }
 
         const place = geoData.results[0];
         const lat = place.latitude;
@@ -124,16 +132,8 @@ async function loadWeather(city) {
 
     } catch (e) {
         console.error(e);
-
-        errorElem.textContent = e.message;
+        errorElem.textContent = "Ошибка при загрузке данных";
         errorElem.style.display = "block";
-        errorElem.style.color = "red";
-        errorElem.style.fontWeight = "bold";
-        errorElem.style.textAlign = "center";
-        errorElem.style.padding = "15px";
-        errorElem.style.border = "2px dashed #8b7355";
-        errorElem.style.borderRadius = "10px";
-        errorElem.style.background = "rgba(255, 235, 205, 0.8)";
     }
 }
 
