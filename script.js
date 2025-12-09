@@ -21,42 +21,51 @@ function levenshtein(a, b) {
     for (j = 0; j <= a.length; m[0][j] = j++);
     for (i = 1; i <= b.length; i++) {
         for (j = 1; j <= a.length; j++) {
-            m[i][j] = b.charAt(i-1) === a.charAt(j-1)
-                ? m[i-1][j-1]
-                : Math.min(m[i-1][j-1]+1, Math.min(m[i][j-1]+1, m[i-1][j]+1));
+            m[i][j] = b.charAt(i - 1) === a.charAt(j - 1)
+                ? m[i - 1][j - 1]
+                : Math.min(m[i - 1][j - 1] + 1, Math.min(m[i][j - 1] + 1, m[i - 1][j] + 1));
         }
     }
     return m[b.length][a.length];
 }
 
+/* -------------- УМНАЯ АВТОКОРРЕКЦИЯ ГОРОДОВ ---------------- */
+
 function smartCityName(rawName) {
     const clean = rawName.trim().toLowerCase();
-    if (clean.length < 3) return rawName;
+
+    // слишком короткие строки не исправляем
+    if (clean.length < 4) return rawName;
+
+    // строки без букв не исправляем
+    if (!/[a-zа-я]/i.test(clean)) return rawName;
+
     const worldCities = [
         "Bishkek","Moscow","Saint Petersburg","Osh","Almaty",
         "Astana","Tashkent","New York","London","Paris",
         "Berlin","Tokyo","Seoul","Dubai","Madrid","Rome",
         "Los Angeles","Chicago"
     ];
-    let best = rawName, bestScore = Infinity;
+
+    let best = rawName;
+    let bestScore = Infinity;
+
     worldCities.forEach(city => {
         const score = levenshtein(clean, city.toLowerCase());
-        if(score < bestScore){ bestScore = score; best = city; }
+
+        // допускаем ошибки лишь 25% от длины слова
+        const allowed = Math.floor(city.length * 0.25);
+
+        if (score < bestScore && score <= allowed) {
+            bestScore = score;
+            best = city;
+        }
     });
-    return bestScore <= 2 ? best : rawName;
+
+    return best;
 }
 
-function weatherCodeToText(code){
-    const map = {
-        0:["Ясно","☀️"],1:["Преимущественно ясно","🌤️"],2:["Переменная облачность","⛅"],
-        3:["Облачно","☁️"],45:["Туман","🌫️"],48:["Морозный туман","🌫️"],51:["Морось","🌦️"],
-        53:["Морось","🌦️"],55:["Морось","🌧️"],61:["Дождь","🌧️"],63:["Дождь","🌧️"],
-        65:["Сильный дождь","🌧️"],71:["Снег","❄️"],73:["Снег","❄️"],75:["Сильный снег","❄️"],
-        80:["Ливень","🌧️"],81:["Ливень","🌧️"],82:["Сильный ливень","🌧️"],95:["Гроза","⛈️"],
-        96:["Гроза с градом","⛈️"],99:["Гроза с крупным градом","⛈️"]
-    };
-    return map[code]||["Неизвестно","❓"];
-}
+/* ----------------------------------------------------------- */
 
 let searchHistory = JSON.parse(localStorage.getItem("searchHistory") || "[]");
 
@@ -75,9 +84,9 @@ function updateHistory() {
 }
 
 function addToHistory(city) {
-    if(!city || searchHistory.includes(city)) return;
+    if (!city || searchHistory.includes(city)) return;
     searchHistory.unshift(city);
-    if(searchHistory.length > 5) searchHistory.pop();
+    if (searchHistory.length > 5) searchHistory.pop();
     localStorage.setItem("searchHistory", JSON.stringify(searchHistory));
     updateHistory();
 }
@@ -92,13 +101,31 @@ async function loadWeather(city) {
     try {
         errorElem.textContent = "";
 
-        const fixedCity = smartCityName(city);
+        const raw = city.trim();
+        const clean = raw.toLowerCase();
+        const fixedCity = smartCityName(raw);
 
-        const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(fixedCity)}&count=1&language=ru`);
+        const geoRes = await fetch(
+            `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(fixedCity)}&count=1&language=ru`
+        );
         const geoData = await geoRes.json();
-        if(!geoData.results || geoData.results.length===0) throw new Error("Город не найден");
+
+        if (!geoData.results || geoData.results.length === 0) {
+            throw new Error("Город не найден");
+        }
 
         const place = geoData.results[0];
+        const found = place.name;            
+        const foundLower = found.toLowerCase();
+
+        const distance = levenshtein(clean, foundLower);
+        const allowed = Math.floor(foundLower.length * 0.25);
+
+        if ( (fixedCity.toLowerCase() === clean && foundLower !== clean)
+             || distance > allowed ) {
+            throw new Error("Город не найден");
+        }
+
         const lat = place.latitude;
         const lon = place.longitude;
 
@@ -109,19 +136,20 @@ async function loadWeather(city) {
 
         renderCurrent(place.name, place.country, weatherData.current_weather, weatherData.daily);
         renderForecast(weatherData.daily);
+        addToHistory(place.name);
+        localStorage.setItem("last_city", place.name);
 
-        addToHistory(fixedCity);
-        localStorage.setItem("last_city", fixedCity);
-
-    } catch(e) {
+    } catch (e) {
         console.error(e);
         errorElem.textContent = e.message;
     }
 }
 
-function renderCurrent(city, country, current, daily){
+
+function renderCurrent(city, country, current, daily) {
     cityNameElem.textContent = `${city}, ${country}`;
     temperatureElem.textContent = `${current.temperature}°C`;
+
     const [text, emoji] = weatherCodeToText(current.weathercode);
     weatherTextElem.textContent = emoji + " " + text;
 
@@ -131,10 +159,21 @@ function renderCurrent(city, country, current, daily){
     humidityElem.textContent = "—";
 }
 
-function renderForecast(daily){
+function weatherCodeToText(code) {
+    const map = {
+        0:["Ясно","☀️"],1:["Преимущественно ясно","🌤️"],2:["Переменная облачность","⛅"],
+        3:["Облачно","☁️"],45:["Туман","🌫️"],48:["Морозный туман","🌫️"],51:["Морось","🌦️"],
+        53:["Морось","🌦️"],55:["Морось","🌧️"],61:["Дождь","🌧️"],63:["Дождь","🌧️"],
+        65:["Сильный дождь","🌧️"],71:["Снег","❄️"],73:["Снег","❄️"],75:["Сильный снег","❄️"],
+        80:["Ливень","🌧️"],81:["Ливень","🌧️"],82:["Сильный ливень","🌧️"],95:["Гроза","⛈️"],
+        96:["Гроза с градом","⛈️"],99:["Гроза с крупным градом","⛈️"]
+    };
+    return map[code] || ["Неизвестно", "❓"];
+}
+
+function renderForecast(daily) {
     forecastContainer.innerHTML = "";
-    // Показываем только первые 3 дня
-    for(let i=0; i<Math.min(3, daily.time.length); i++){
+    for (let i = 0; i < Math.min(3, daily.time.length); i++) {
         const [text, emoji] = weatherCodeToText(daily.weathercode[i]);
         const card = document.createElement("div");
         card.className = "forecast-item";
@@ -150,13 +189,13 @@ function renderForecast(daily){
 
 searchIcon.addEventListener("click", () => {
     const city = cityInput.value.trim();
-    if(city) loadWeather(city);
+    if (city) loadWeather(city);
 });
 
 cityInput.addEventListener("keydown", e => {
-    if(e.key === "Enter") {
+    if (e.key === "Enter") {
         const city = cityInput.value.trim();
-        if(city) loadWeather(city);
+        if (city) loadWeather(city);
     }
 });
 
