@@ -457,7 +457,6 @@ body::before {
     60%, 100% { content: '...'; }
 }
 
-/* Адаптивность для планшетов */
 @media (max-width: 968px) {
     .book-container {
         max-width: 90%;
