@@ -16,7 +16,6 @@ body {
     align-items: center;
     padding: 30px 15px;
     position: relative;
-    overflow: hidden;
 }
 
 body::before {
